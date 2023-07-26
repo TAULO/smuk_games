@@ -79,12 +79,15 @@ class _MyHomePageState extends State<MyHomePage> {
       Duration? sourceDuraton = await audioPlayer.getDuration();
       duration = Duration(seconds: sourceDuraton!.inSeconds);
 
-      // not pretty
+      // dirty reload
       setState(() {
         sliderValue = duration.inSeconds.toDouble() / duration.inSeconds / 2;
         currDuration = duration.inSeconds.toDouble() / 2;
       });
 
+      handleAsync();
+
+      // play random song
       audioPlayer.onPositionChanged.listen((pos) {
         if (random > 0 && pos.inSeconds == random) {
           audioPlayer.stop();
@@ -92,6 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }
       });
 
+      // lock specifitc UI elements when playing
       audioPlayer.onPlayerStateChanged.listen((state) {
         if (state.name == "playing") {
           setState(() {
@@ -100,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }
       });
 
-      // listens for finish song to be completed - which will play drik song if checked
+      // play drik song if checked
       finishAudioPlayer.onPlayerStateChanged.listen((state) {
         if (useDrikDrik && state.name == "completed") {
           _playDrikDrik();
@@ -110,14 +114,12 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
 
-    // listens for drik song to be completed - which will turn flashes off
+    // turn flashes off
     drikAudioPlayer.onPlayerStateChanged.listen((state) {
       if (state.name == "completed") {
         _stopSong();
       }
     });
-
-    handleAsync();
 
     _controller = CameraController(widget.camera, ResolutionPreset.medium);
     _initializeControllerFuture = _controller.initialize();
