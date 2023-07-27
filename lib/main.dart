@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
@@ -54,10 +55,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final finishAudioPlayer = AudioPlayer();
   final drikAudioPlayer = AudioPlayer();
   Duration duration = const Duration();
-  Duration? currPosition = const Duration();
   double sliderValue = 0;
   double currDuration = 0;
-  double currSongPosition = 0;
+  double currPos = 0;
   int random = 0;
   bool hasRandom = false;
   bool toggleClick = false;
@@ -84,35 +84,41 @@ class _MyHomePageState extends State<MyHomePage> {
         sliderValue = duration.inSeconds.toDouble() / duration.inSeconds / 2;
         currDuration = duration.inSeconds.toDouble() / 2;
       });
-
-      handleAsync();
-
-      // play random song
-      audioPlayer.onPositionChanged.listen((pos) {
-        if (random > 0 && pos.inSeconds == random) {
-          audioPlayer.stop();
-          _playFinishSong();
-        }
-      });
-
-      // lock specifitc UI elements when playing
-      audioPlayer.onPlayerStateChanged.listen((state) {
-        if (state.name == "playing") {
-          setState(() {
-            isLocked = true;
-          });
-        }
-      });
-
-      // play drik song if checked
-      finishAudioPlayer.onPlayerStateChanged.listen((state) {
-        if (useDrikDrik && state.name == "completed") {
-          _playDrikDrik();
-        } else if (!useDrikDrik && state.name == "completed") {
-          _stopSong();
-        }
-      });
     }
+
+    handleAsync();
+
+    // play random song
+    audioPlayer.onPositionChanged.listen((pos) {
+      if (random > 0 && pos.inSeconds == random) {
+        audioPlayer.stop();
+        _playFinishSong();
+      }
+    });
+
+    // lock specifitc UI elements when playing
+    audioPlayer.onPlayerStateChanged.listen((state) {
+      if (state.name == "playing") {
+        setState(() {
+          isLocked = true;
+        });
+      }
+    });
+
+    audioPlayer.onPositionChanged.listen((pos) {
+      setState(() {
+        currPos = pos.inSeconds.toDouble();
+      });
+    });
+
+    // play drik song if checked
+    finishAudioPlayer.onPlayerStateChanged.listen((state) {
+      if (useDrikDrik && state.name == "completed") {
+        _playDrikDrik();
+      } else if (!useDrikDrik && state.name == "completed") {
+        _stopSong();
+      }
+    });
 
     // turn flashes off
     drikAudioPlayer.onPlayerStateChanged.listen((state) {
@@ -160,8 +166,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   _stopSong() {
     setState(() {
+      currPos = 0;
       toggleClick = false;
-      currSongPosition = 0;
       isLocked = false;
     });
     audioPlayer.stop();
@@ -172,7 +178,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _updateSlider(double curr) {
-    sliderValue = (duration.inSeconds * curr) / duration.inSeconds;
+    // sliderValue = (duration.inSeconds * curr) / duration.inSeconds;
     currDuration = (duration.inSeconds * curr);
 
     setState(() {
@@ -181,17 +187,23 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   List<String> _getSongsPath() {
+    // temporary solution - should work just fine
     try {
       Directory dir = Directory(
           "/Users/taulo/Desktop/Flutter practice/smuk_games/assets/audio");
 
       String correctPath(path) => "audio/$path";
-      return dir
+      List<String> songs = dir
           .listSync()
           .where((e) => e.path.toLowerCase().endsWith(".mp3"))
           .map(
               (e) => correctPath(e.path.substring(e.path.lastIndexOf("/") + 1)))
           .toList();
+
+      // shuffle
+      songs.shuffle();
+
+      return songs;
     } catch (e) {
       return [];
     }
@@ -206,7 +218,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (songs.isEmpty) {
       // update this value if more songs are being added to the audio folder
-      for (int i = 1; i <= 22; i++) {
+      for (int i = 1; i <= 26; i++) {
         songs.add(pathIndex(i));
       }
     }
@@ -242,11 +254,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
       stopFlash = false;
 
-      while (!stopFlash) {
-        _controller.setFlashMode(FlashMode.torch);
-        await Future.delayed(const Duration(milliseconds: 100));
-        _controller.setFlashMode(FlashMode.off);
-        await Future.delayed(const Duration(milliseconds: 100));
+      if (Platform.isIOS || Platform.isAndroid) {
+        while (!stopFlash) {
+          _controller.setFlashMode(FlashMode.torch);
+          await Future.delayed(const Duration(milliseconds: 100));
+          _controller.setFlashMode(FlashMode.off);
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
       }
     }
   }
@@ -298,25 +312,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             // postion slider
-            StreamBuilder(
-                stream: audioPlayer.onPositionChanged,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    return Column(
-                      children: [
-                        Slider(
-                          value: (snapshot.data!.inSeconds.toDouble() / 100),
-                          onChanged: null,
-                        ),
-                      ],
-                    );
-                  } else {
-                    return const Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: Text("Tryk på start!"),
-                    );
-                  }
-                }),
+            Slider(value: currPos / 100, onChanged: null),
             // stop slider
             Slider(
                 value: sliderValue,
