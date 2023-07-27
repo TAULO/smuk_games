@@ -63,6 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool toggleClick = false;
   bool useDrikDrik = false;
   bool stopFlash = false;
+  bool useFlash = false;
   bool isLocked = false;
 
   late CameraController _controller;
@@ -253,8 +254,8 @@ class _MyHomePageState extends State<MyHomePage> {
       await _initializeControllerFuture;
 
       stopFlash = false;
-
-      if (Platform.isIOS || Platform.isAndroid) {
+      print(useFlash);
+      if (useFlash && Platform.isIOS || Platform.isAndroid) {
         while (!stopFlash) {
           _controller.setFlashMode(FlashMode.torch);
           await Future.delayed(const Duration(milliseconds: 100));
@@ -298,18 +299,34 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 15),
-              child: CheckboxMenuButton(
-                value: useDrikDrik,
-                onChanged: !isLocked
-                    ? (state) => setState(() {
-                          useDrikDrik = state!;
-                        })
-                    : null,
-                child: const Text(
-                    "Drik, drik, drik, drik, drik, drik, driiiiiiiiiiik!"),
-              ),
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 15),
+                  child: CheckboxMenuButton(
+                    value: useFlash,
+                    onChanged: !isLocked
+                        ? (state) => setState(() {
+                              useFlash = state!;
+                            })
+                        : null,
+                    child: const Text("Slå flash til"),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 15),
+                  child: CheckboxMenuButton(
+                    value: useDrikDrik,
+                    onChanged: !isLocked
+                        ? (state) => setState(() {
+                              useDrikDrik = state!;
+                            })
+                        : null,
+                    child: const Text(
+                        "Drik, drik, drik, drik, drik, drik, driiiiiiiiiiik!"),
+                  ),
+                ),
+              ],
             ),
             // postion slider
             Slider(value: currPos / 100, onChanged: null),
